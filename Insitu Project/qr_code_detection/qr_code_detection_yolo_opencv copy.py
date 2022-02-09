@@ -56,13 +56,14 @@ def labelQR(frame):
             polygon_text_placement = qrcode_inFrame.rect
             cv2.putText(frame, QRCode_data, (polygon_text_placement[0], polygon_text_placement[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
-
 # Determine the output layer
 ln = net.getLayerNames()
 ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
 pipeline = dai.Pipeline()
+
 pipeline.setOpenVINOVersion(version=dai.OpenVINO.Version.VERSION_2021_2)
+
 syncNN = True
 
 # Define sources and outputs
