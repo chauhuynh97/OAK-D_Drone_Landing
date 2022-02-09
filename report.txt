@@ -1,0 +1,119 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 6 files
+Detected 4 issues that require attention
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+File: tensorflow-yolo-v3/convert_weights.py
+--------------------------------------------------------------------------------
+tensorflow-yolo-v3/convert_weights.py:51:20: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+--------------------------------------------------------------------------------
+File: tensorflow-yolo-v3/demo.py
+--------------------------------------------------------------------------------
+tensorflow-yolo-v3/demo.py:101:4: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+--------------------------------------------------------------------------------
+File: tensorflow-yolo-v3/yolo_v3.py
+--------------------------------------------------------------------------------
+tensorflow-yolo-v3/yolo_v3.py:73:1: ERROR: Using member tf.contrib.framework.add_arg_scope in deprecated module tf.contrib. tf.contrib.framework.add_arg_scope cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+--------------------------------------------------------------------------------
+File: tensorflow-yolo-v3/yolo_v3_tiny.py
+--------------------------------------------------------------------------------
+tensorflow-yolo-v3/yolo_v3_tiny.py:8:7: ERROR: Using member tf.contrib.slim in deprecated module tf.contrib. tf.contrib.slim cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+================================================================================
+Detailed log follows:
+
+================================================================================
+================================================================================
+Input tree: 'tensorflow-yolo-v3/'
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'tensorflow-yolo-v3/convert_weights.py'
+ outputting to 'tensorflow-yolo-v3_2/convert_weights.py'
+--------------------------------------------------------------------------------
+
+38:13: INFO: Renamed 'tf.placeholder' to 'tf.compat.v1.placeholder'
+40:9: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+43:32: INFO: Renamed 'tf.global_variables' to 'tf.compat.v1.global_variables'
+46:12: INFO: Renamed 'tf.train.Saver' to 'tf.compat.v1.train.Saver'
+46:27: INFO: Renamed 'tf.global_variables' to 'tf.compat.v1.global_variables'
+48:9: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+51:20: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+56:4: INFO: Renamed 'tf.app.run' to 'tf.compat.v1.app.run'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'tensorflow-yolo-v3/convert_weights_pb.py'
+ outputting to 'tensorflow-yolo-v3_2/convert_weights_pb.py'
+--------------------------------------------------------------------------------
+
+42:13: INFO: Renamed 'tf.placeholder' to 'tf.compat.v1.placeholder'
+44:9: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+46:32: INFO: Renamed 'tf.global_variables' to 'tf.compat.v1.global_variables'
+51:9: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+56:4: INFO: Renamed 'tf.app.run' to 'tf.compat.v1.app.run'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'tensorflow-yolo-v3/demo.py'
+ outputting to 'tensorflow-yolo-v3_2/demo.py'
+--------------------------------------------------------------------------------
+
+48:18: INFO: Renamed 'tf.GPUOptions' to 'tf.compat.v1.GPUOptions'
+50:13: INFO: Renamed 'tf.ConfigProto' to 'tf.compat.v1.ConfigProto'
+68:13: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+83:16: INFO: Renamed 'tf.train.Saver' to 'tf.compat.v1.train.Saver'
+83:40: INFO: Renamed 'tf.global_variables' to 'tf.compat.v1.global_variables'
+85:13: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+101:4: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+105:4: INFO: Renamed 'tf.app.run' to 'tf.compat.v1.app.run'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'tensorflow-yolo-v3/utils.py'
+ outputting to 'tensorflow-yolo-v3_2/utils.py'
+--------------------------------------------------------------------------------
+
+11:16: INFO: Renamed 'tf.get_default_graph' to 'tf.compat.v1.get_default_graph'
+12:17: INFO: Renamed 'tf.get_default_graph' to 'tf.compat.v1.get_default_graph'
+19:13: INFO: Renamed 'tf.placeholder' to 'tf.compat.v1.placeholder'
+21:9: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+32:9: INFO: Renamed 'tf.gfile.GFile' to 'tf.io.gfile.GFile'
+33:20: INFO: Renamed 'tf.GraphDef' to 'tf.compat.v1.GraphDef'
+50:23: INFO: Renamed 'tf.graph_util.convert_variables_to_constants' to 'tf.compat.v1.graph_util.convert_variables_to_constants'
+52:8: INFO: Renamed 'tf.get_default_graph' to 'tf.compat.v1.get_default_graph'
+56:9: INFO: Renamed 'tf.gfile.GFile' to 'tf.io.gfile.GFile'
+93:24: INFO: Renamed 'tf.assign' to 'tf.compat.v1.assign'
+106:20: INFO: Renamed 'tf.assign' to 'tf.compat.v1.assign'
+120:16: INFO: Renamed 'tf.assign' to 'tf.compat.v1.assign'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'tensorflow-yolo-v3/yolo_v3.py'
+ outputting to 'tensorflow-yolo-v3_2/yolo_v3.py'
+--------------------------------------------------------------------------------
+
+95:24: INFO: Added keywords to args of function 'tf.pad'
+100:24: INFO: Added keywords to args of function 'tf.pad'
+73:1: ERROR: Using member tf.contrib.framework.add_arg_scope in deprecated module tf.contrib. tf.contrib.framework.add_arg_scope cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+132:49: INFO: tf.zeros_initializer requires manual check. Initializers no longer have the dtype argument in the constructor or partition_info argument in the __call__ method.
+The calls have been converted to compat.v1 for safety (even though they may already have been correct).
+132:49: INFO: Renamed 'tf.zeros_initializer' to 'tf.compat.v1.zeros_initializer'
+142:22: INFO: Added keywords to args of function 'tf.transpose'
+183:17: INFO: Added keywords to args of function 'tf.transpose'
+192:13: INFO: Changed tf.image.resize_nearest_neighbor call to tf.image.resize(..., method=tf.image.ResizeMethod.NEAREST_NEIGHBOR).
+196:17: INFO: Added keywords to args of function 'tf.transpose'
+220:17: INFO: Added keywords to args of function 'tf.transpose'
+240:17: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+243:17: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Processing file 'tensorflow-yolo-v3/yolo_v3_tiny.py'
+ outputting to 'tensorflow-yolo-v3_2/yolo_v3_tiny.py'
+--------------------------------------------------------------------------------
+
+8:7: ERROR: Using member tf.contrib.slim in deprecated module tf.contrib. tf.contrib.slim cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+35:17: INFO: Added keywords to args of function 'tf.transpose'
+58:21: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+--------------------------------------------------------------------------------
+

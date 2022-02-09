@@ -4,5 +4,11 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Insitu Project/OAK-D_Drone_Landing" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Insitu Project/depthai" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/darknet" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tensorflow-yolo-v3" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tensorflow-yolo-v3/addons" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tensorflow-yolo-v3_2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/yolo2openvino" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/yolo2openvino/tensorflow-yolo-v3" vcs="Git" />
   </component>
 </project>

@@ -7,6 +7,7 @@ from pyzbar.pyzbar import decode
 import sys
 import depthai as dai
 import blobconverter
+import tensorflow as tf
 
 
 window_name = 'QR Code Detection'
@@ -16,8 +17,9 @@ threshold_for_approval = 0.75
 # framework to build upon. Darknet is a framework that uses CUDA, makes processing
 # much faster. YOLOV3 also provides us with weights for QRcode, which is needed by the
 # Neural network.
-classes = open('qrcode.names').read().strip().split('\n')
-net = cv2.dnn.readNetFromDarknet('qrcode-yolov3-tiny.cfg', 'qrcode-yolov3-tiny_last.weights')
+classes = open('/Users/arqumuddin/Desktop/OAK-D_Drone_Landing/Insitu Project/qr_code_detection/qrcode.names').read().strip().split('\n')
+net = cv2.dnn.readNetFromDarknet('/Users/arqumuddin/Desktop/OAK-D_Drone_Landing/Insitu Project/qr_code_detection/qrcode-yolov3-tiny.cfg', 
+                                 '/Users/arqumuddin/Desktop/OAK-D_Drone_Landing/Insitu Project/qr_code_detection/qrcode-yolov3-tiny_last.weights')
 net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
 
 # YOLOV3 documentation will ask you to use this, but this is only for processing
@@ -96,7 +98,7 @@ def postprocess(frame, outs):
 ln = net.getLayerNames()
 ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
-cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture(0)
 
 class QueueFPS(queue.Queue):
     def __init__(self):
@@ -184,7 +186,7 @@ def processingThreadBody():
             # setting node configs
             stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
-            spatialDetectionNetwork.setBlobPath(blobconverter.from_zoo(name='qrcode-yolov3-tiny', shaves=6))
+            # spatialDetectionNetwork.setBlobPath(blobconverter.from_zoo(name='qrcode-yolov3-tiny', shaves=6))
             spatialDetectionNetwork.setConfidenceThreshold(0.5)
             spatialDetectionNetwork.input.setBlocking(False)
             spatialDetectionNetwork.setBoundingBoxScaleFactor(0.5)
