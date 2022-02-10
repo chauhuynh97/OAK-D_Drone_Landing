@@ -173,13 +173,16 @@ def camera_thread_function(q):
                 zs = int(detection.spatialCoordinates.z)
                 #print("Z: ", zs)
 
-                q.put([0,0,zs])
+                #q.put([0,0,zs])
 
                 #forward_land([0, 0, zs])
-                # counter += 1
-                # if counter == fps:
-                #     q.put([0,0,zs])
-                #     counter = 0
+
+                if counter == 0:
+                    q.put([0,0,zs])
+                    #counter = 0
+                counter += 1
+                if counter == 30:
+                    counter = 0
 
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                         (255, 255, 255))
