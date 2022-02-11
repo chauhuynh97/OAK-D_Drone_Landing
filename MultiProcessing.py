@@ -9,27 +9,31 @@ from multiprocessing import Process, Value, Queue, freeze_support
 import time
 
 
-def drone_thread_function(q):
+def drone_thread_function(q, paired_flag):
 
     # set up drone connection and take off before trying to land
     print('Creating Drone Object')
     drone = CoDrone.CoDrone()
-    print ("Getting Ready to Pair")
+    print("Getting Ready to Pair")
     drone.pair(drone.Nearest)
     print("Paired")
+    paired_flag.value = 1
     drone.takeoff()
     print("Taking Off")
     print(drone.get_height())
 
     while True:
+
         if not q.empty():
             start_coords = q.get(0)
             print('from drone',start_coords)
-            forward_land(drone,start_coords)
+            straight_land(drone,start_coords)
+
         else:
             print('q is empty')
-            drone.land()
-            drone.close()
+            # drone.land()
+            # drone.close()
+
 
     # drone.close()
     # print('drone closed')
@@ -37,7 +41,7 @@ def drone_thread_function(q):
 
 
 
-def camera_thread_function(q):
+def camera_thread_function(q, paired_flag):
 
     # camera setup
     syncNN = False
@@ -177,11 +181,11 @@ def camera_thread_function(q):
 
                 #forward_land([0, 0, zs])
 
-                if counter == 0:
+                if counter == 0 and paired_flag.value == 1:
                     q.put([0,0,zs])
                     #counter = 0
                 counter += 1
-                if counter == 30:
+                if counter == 70:
                     counter = 0
 
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
@@ -195,7 +199,11 @@ def camera_thread_function(q):
 
 # simple straight laning function
 def straight_land(drone, start_coords, land_coords = [0,0,0]):
+    startTime = time.time()
+
     height_threshold = 150 # height before drone.land()
+    depth_threshold = 1500
+
     # x:left-right, y:height, z:depth in mm
     xs,ys,zs = start_coords
     xl,yl,zl = land_coords
@@ -210,33 +218,41 @@ def straight_land(drone, start_coords, land_coords = [0,0,0]):
     pitch_p = 30  # 20 is the scale factor for pitch, assume while loop repeat 3 times
     # for now assume that camera is on the ground, drone is starting out higher than camera
     throttle_p = -50 #-ys/9  # 7 is the scale factor for throttle
-    while h > height_threshold:
+    z = zs - zl
+    if z > depth_threshold:
         drone.set_pitch(pitch_p)
-        drone.move(2)
+        drone.move(1)
 
-        h = drone.get_height()
-        if h <= height_threshold:
-            break
 
-        throttle_p = throttle_p + 3
-        if throttle_p > -15:
-            drone.land()
-            print("breaking the loop")
-            break
-        else:
-            drone.set_throttle(throttle_p)
-            drone.move(1)
+    if z <= depth_threshold:
+        drone.go_to_height(height_threshold)
+
+        # throttle_p = throttle_p + 3
+        # if throttle_p > -15:
+        #     drone.land()
+        #     print("breaking the loop")
+        #     break
+        # else:
+        #     drone.set_throttle(throttle_p)
+        #     drone.move(1)
         # print(drone.get_height())
 
         h = drone.get_height()
         print('After throttle')
         print(h)
 
-    drone.land()
-    print("landing")
-    drone.close()
-    print('drone closed')
-    exitFlag = 1
+        drone.set_pitch(15)
+        drone.move(1)
+        drone.land()
+        print("landing")
+        drone.close()
+        print('drone closed')
+
+        exitFlag = 1
+
+    executionTime = (time.time() - startTime)
+    print('Execution time in seconds: ' + str(executionTime))
+
 
 # pitch forward and continuously checking the z coords
 def forward_land(drone, start_coords,land_coords=[0,0,0]):
@@ -259,22 +275,24 @@ def forward_land(drone, start_coords,land_coords=[0,0,0]):
 if __name__ == '__main__':
     freeze_support()
 
-    exitFlag = 0
+    # exitFlag = 0
+    paired_flag = Value('i',0)
 
     locationQ = Queue()
 
-    camera = Process(target=camera_thread_function, args=(locationQ,))
+    camera = Process(target=camera_thread_function, args=(locationQ,paired_flag))
     camera.start()
 
-    drone1 = Process(target=drone_thread_function, args=(locationQ,))
+    drone1 = Process(target=drone_thread_function, args=(locationQ,paired_flag))
     drone1.start()
 
-    while exitFlag == 0:
-        pass
+    # while exitFlag == 0:
+    #     pass
 
     camera.join()
     drone1.join()
 
+    print('length of q', len(locationQ))
 
 
 
