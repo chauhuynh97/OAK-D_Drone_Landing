@@ -9,7 +9,7 @@ from multiprocessing import Process, Value, Queue, freeze_support
 import time
 
 
-def drone_thread_function(q, paired_flag, data_flag):
+def drone_thread_function(q,data_flag):
 
     # set up drone connection and take off before trying to land
     print('Creating Drone Object')
@@ -17,7 +17,6 @@ def drone_thread_function(q, paired_flag, data_flag):
     print("Getting Ready to Pair")
     drone.pair(drone.Nearest)
     print("Paired")
-    paired_flag.value = 1
     data_flag.value = 1
     drone.takeoff()
     print("Taking Off")
@@ -25,19 +24,18 @@ def drone_thread_function(q, paired_flag, data_flag):
 
     while True:
 
-        if data_flag.value == 0:
+        if data_flag.value == 0 and not q.empty():
             start_coords = q.get(0)
             print('from drone',start_coords)
             straight_land(drone,start_coords)
             data_flag.value = 1
-
         # else:
         #     print('q is empty')
 
+    data_flag.value = 0
 
 
-def camera_thread_function(q, paired_flag,data_flag):
-
+def camera_thread_function(q,data_flag):
     # camera setup
     syncNN = False
 
@@ -75,6 +73,14 @@ def camera_thread_function(q, paired_flag,data_flag):
 
     # Setting node configs
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+
+    # set disparity
+    # Better handling for occlusions:
+    stereo.setLeftRightCheck(True)  # True for removing disparity pixels miscalculation
+    # Closer-in minimum depth, disparity range is doubled:
+    stereo.setExtendedDisparity(False)  # True to detect closer distanced objects
+    # Better accuracy for longer distance, fractional disparity 32-levels:
+    stereo.setSubpixel(True)  # True for farther visual range
 
     spatialDetectionNetwork.setBlobPath(blobconverter.from_zoo(name='mobilenet-ssd', shaves=6))
     spatialDetectionNetwork.setConfidenceThreshold(0.5)
@@ -146,6 +152,7 @@ def camera_thread_function(q, paired_flag,data_flag):
             height = frame.shape[0]
             width = frame.shape[1]
             for detection in detections:
+
                 # Denormalize bounding box
                 x1 = int(detection.xmin * width)
                 x2 = int(detection.xmax * width)
@@ -171,8 +178,8 @@ def camera_thread_function(q, paired_flag,data_flag):
                 ys = int(detection.spatialCoordinates.y)
                 zs = int(detection.spatialCoordinates.z)
 
-
-                if paired_flag.value == 1 and data_flag.value == 1:
+                # str(label) == "person" and
+                if data_flag.value == 1:
                     q.put([xs,0,zs])
                     data_flag.value = 0
 
@@ -186,41 +193,46 @@ def camera_thread_function(q, paired_flag,data_flag):
 
 
 # simple straight landing function
-def straight_land(drone, start_coords, land_coords = [0,0,0]):
+def straight_land(drone, start_coords, land_coords=[0,0,0]):
     #startTime = time.time()
 
-    height_threshold = 150 # height before drone.land()
+    height_threshold = 180  # height before drone.land()
     depth_threshold = 1500
-    left_threshold = -300
-    right_threshold = 300
+    left_threshold = -250
+    right_threshold = 250
 
     # x:left-right, y:height, z:depth in mm
     xs,ys,zs = start_coords
     xl,yl,zl = land_coords
 
-    pitch_p = 30  # 20 is the scale factor for pitch, assume while loop repeat 3 times
+    pitch_power = 30  # 20 is the scale factor for pitch, assume while loop repeat 3 times
+    roll_power = 25  # moves left 20
 
     x = xs - xl
     z = zs - zl
-    if z > depth_threshold:
-        drone.set_roll(0)
-        drone.set_pitch(pitch_p)
-        drone.move(1)
-    else:
-        drone.set_pitch(0)
-        drone.move(0)
 
     if x < left_threshold:
         drone.set_pitch(0)
-        drone.set_roll(-25)
+        print('move right')
+        drone.set_roll(-roll_power)
         drone.move(1)
     elif x > right_threshold:
         drone.set_pitch(0)
-        drone.set_roll(25)
+        print('move left')
+        drone.set_roll(roll_power)
         drone.move(1)
     else:
         drone.set_roll(0)
         drone.move(0)
+        if z > depth_threshold:
+            drone.set_roll(0)
+            print('move forward')
+            drone.set_pitch(pitch_power)
+            drone.move(1)
+        else:
+            drone.set_pitch(0)
+            drone.move(0)
+
 
     if z <= depth_threshold and left_threshold < x < right_threshold:
         drone.go_to_height(height_threshold)
@@ -228,13 +240,15 @@ def straight_land(drone, start_coords, land_coords = [0,0,0]):
         # print('within landing region')
 
         print('coords before landing', start_coords)
-        drone.set_pitch(15)
-        drone.move(1)
+        # drone.set_pitch(5)
+        # drone.move(1)
         print('landing')
         drone.land()
         print("landing")
         drone.close()
         print('drone closed')
+        drone.disconnect()
+        print('drone disconnected')
 
     # executionTime = (time.time() - startTime)
     # print('Execution time in seconds: ' + str(executionTime))
@@ -261,26 +275,16 @@ def forward_land(drone, start_coords,land_coords=[0,0,0]):
 if __name__ == '__main__':
     freeze_support()
 
-    # exitFlag = 0
-    paired_flag = Value('i',0)
     data_flag = Value('i',0)
-    #camera_flag = Value('i',0)
-
     locationQ = Queue()
 
-    camera = Process(target=camera_thread_function, args=(locationQ,paired_flag,data_flag))
+    camera = Process(target=camera_thread_function, args=(locationQ,data_flag))
     camera.start()
 
-    drone1 = Process(target=drone_thread_function, args=(locationQ,paired_flag,data_flag))
+    drone1 = Process(target=drone_thread_function, args=(locationQ,data_flag))
     drone1.start()
-
-    # while exitFlag == 0:
-    #     pass
 
     camera.join()
     drone1.join()
-
-    # print('length of q', len(locationQ))
-
 
 
