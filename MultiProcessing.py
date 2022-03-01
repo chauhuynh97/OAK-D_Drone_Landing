@@ -8,6 +8,11 @@ from threading import Thread
 from multiprocessing import Process, Value, Queue, freeze_support
 import time
 
+height_threshold = 180  # height before drone.land()
+depth_upper_threshold = 1000
+depth_lower_threshold = 500
+left_threshold = -250
+right_threshold = 250
 
 def drone_thread_function(q,data_flag):
 
@@ -27,7 +32,12 @@ def drone_thread_function(q,data_flag):
         if data_flag.value == 0 and not q.empty():
             start_coords = q.get(0)
             print('from drone',start_coords)
-            straight_land(drone,start_coords)
+            # x:left-right, y:height, z:depth in mm
+            xs,ys,zs = start_coords
+            xl,yl,zl = [0,0,0]
+            x = xs - xl
+            z = zs - zl
+            drone_land(drone,x,z)
             data_flag.value = 1
         # else:
         #     print('q is empty')
@@ -193,23 +203,11 @@ def camera_thread_function(q,data_flag):
 
 
 # simple straight landing function
-def straight_land(drone, start_coords, land_coords=[0,0,0]):
+def drone_move(drone, x,z):
     #startTime = time.time()
-
-    height_threshold = 180  # height before drone.land()
-    depth_threshold = 1500
-    left_threshold = -250
-    right_threshold = 250
-
-    # x:left-right, y:height, z:depth in mm
-    xs,ys,zs = start_coords
-    xl,yl,zl = land_coords
 
     pitch_power = 30  # 20 is the scale factor for pitch, assume while loop repeat 3 times
     roll_power = 25  # moves left 20
-
-    x = xs - xl
-    z = zs - zl
 
     if x < left_threshold:
         drone.set_pitch(0)
@@ -224,22 +222,25 @@ def straight_land(drone, start_coords, land_coords=[0,0,0]):
     else:
         drone.set_roll(0)
         drone.move(0)
-        if z > depth_threshold:
+        if z > depth_upper_threshold:
             drone.set_roll(0)
             print('move forward')
             drone.set_pitch(pitch_power)
+            drone.move(1)
+        elif z < depth_lower_threshold:
+            drone.set_roll(0)
+            print('move backward')
+            drone.set_pitch(-pitch_power)
             drone.move(1)
         else:
             drone.set_pitch(0)
             drone.move(0)
 
-
-    if z <= depth_threshold and left_threshold < x < right_threshold:
+def drone_land(drone, x,z):
+    if depth_lower_threshold <= z <= depth_upper_threshold and left_threshold <= x <= right_threshold:
         drone.go_to_height(height_threshold)
 
-        # print('within landing region')
-
-        print('coords before landing', start_coords)
+        print('coords before landing', x, z)
         # drone.set_pitch(5)
         # drone.move(1)
         print('landing')
@@ -249,28 +250,11 @@ def straight_land(drone, start_coords, land_coords=[0,0,0]):
         print('drone closed')
         drone.disconnect()
         print('drone disconnected')
+    else:
+        drone_move(drone,x,z)
 
     # executionTime = (time.time() - startTime)
     # print('Execution time in seconds: ' + str(executionTime))
-
-
-# pitch forward and continuously checking the z coords
-def forward_land(drone, start_coords,land_coords=[0,0,0]):
-    # depth distance in mm
-    xs,ys,zs = start_coords
-    xl,yl,zl = land_coords
-
-    z = zs - zl
-    pitch_power = 30
-    if z > 1500:
-        drone.set_pitch(pitch_power)
-        drone.move(2)
-    elif z > 1000:
-        drone.set_pitch(pitch_power)
-        drone.move(1)
-    else:
-        straight_land(drone,start_coords,land_coords)
-
 
 if __name__ == '__main__':
     freeze_support()
