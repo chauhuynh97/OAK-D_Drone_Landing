@@ -9,7 +9,7 @@ from multiprocessing import Process, Value, Queue, freeze_support
 import time
 
 height_threshold = 180  # height before drone.land()
-depth_upper_threshold = 1400
+depth_upper_threshold = 1350
 depth_lower_threshold = 500
 left_threshold = -300
 right_threshold = 300
