@@ -9,10 +9,16 @@ from multiprocessing import Process, Value, Queue, freeze_support
 import time
 
 height_threshold = 180  # height before drone.land()
-depth_upper_threshold = 1000
+depth_upper_threshold = 1400
 depth_lower_threshold = 500
-left_threshold = -250
-right_threshold = 250
+left_threshold = -300
+right_threshold = 300
+
+drone_movement_start = 0
+drone_movement_end = 0
+data_request_start = 0
+data_request_end = 0
+
 
 def drone_thread_function(q,data_flag):
 
@@ -32,14 +38,20 @@ def drone_thread_function(q,data_flag):
 
         if data_flag.value == 0 and not q.empty():
             start_coords = q.get(0)
+            data_request_end = time.time()
             print('from drone',start_coords)
             # x:left-right, y:height, z:depth in mm
             xs,ys,zs = start_coords
             xl,yl,zl = [0,0,0]
             x = xs - xl
             z = zs - zl
+            drone_movement_start = time.time()
             drone_land(drone,x,z)
+            drone_movement_end = time.time()
+            print('drone movement time', drone_movement_end - drone_movement_start)
             data_flag.value = 1
+            data_request_start = time.time()
+            print('data request time', data_request_start - data_request_end)
         # else:
         #     print('q is empty')
 
@@ -100,7 +112,7 @@ def camera_thread_function(q,data_flag):
     stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
     #stereo.setExtendedDisparity(False)
     stereo.setLeftRightCheck(True)
-    #stereo.setSubpixel(True)
+    stereo.setSubpixel(True)
 
     spatialDetectionNetwork.setBlobPath(blobconverter.from_zoo(name='yolo-v4-tiny-tf', shaves=6))
     spatialDetectionNetwork.setConfidenceThreshold(0.5)
@@ -217,6 +229,8 @@ def camera_thread_function(q,data_flag):
                 if data_flag.value == 1 and str(label) == "person":
                     q.put([xs,0,zs])
                     data_flag.value = 0
+                    # data_request_end = time.time()
+                    # print('data request time', data_request_end - data_request_start)
 
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                         (255, 255, 255))
@@ -231,34 +245,40 @@ def camera_thread_function(q,data_flag):
 def drone_move(drone, x,z):
     #startTime = time.time()
 
-    pitch_power = 30  # 20 is the scale factor for pitch, assume while loop repeat 3 times
+    pitch_power = 20 # 20 is the scale factor for pitch, assume while loop repeat 3 times
     roll_power = 20  # moves left 20
 
     if x < left_threshold:
         drone.set_pitch(0)
+        drone.set_throttle(0)
         print('move right')
         drone.set_roll(-roll_power)
         drone.move(1)
     elif x > right_threshold:
         drone.set_pitch(0)
+        drone.set_throttle(0)
         print('move left')
         drone.set_roll(roll_power)
         drone.move(1)
     else:
         drone.set_roll(0)
+        drone.set_throttle(0)
         drone.move(0)
         if z > depth_upper_threshold:
             drone.set_roll(0)
+            drone.set_throttle(0)
             print('move forward')
             drone.set_pitch(pitch_power)
             drone.move(1)
         elif z < depth_lower_threshold:
             drone.set_roll(0)
+            drone.set_throttle(0)
             print('move backward')
             drone.set_pitch(-pitch_power)
             drone.move(1)
         else:
             drone.set_pitch(0)
+            drone.set_throttle(0)
             drone.move(0)
 
 def drone_land(drone, x,z):
