@@ -9,10 +9,10 @@ from multiprocessing import Process, Value, Queue, freeze_support
 import time
 
 height_threshold = 180  # height before drone.land()
-depth_upper_threshold = 1350
-depth_lower_threshold = 500
-left_threshold = -250
-right_threshold = 250
+depth_upper_threshold = 1000
+depth_lower_threshold = 300
+left_threshold = -300
+right_threshold = 300
 
 drone_movement_start = 0
 drone_movement_end = 0
@@ -62,12 +62,14 @@ def drone_thread_function(q,data_flag):
 
     data_flag.value = 0
 
-def drone_thread_function2(detected_flag):
+def drone_thread_function2(q,detected_flag,data_flag):
     # set up drone connection and take off before trying to land
     print('Creating Drone Object')
     drone = CoDrone.CoDrone()
     print("Getting Ready to Pair")
-    drone.pair(drone.Nearest)
+    # drone.pair(drone.Nearest)
+    # drone.pair('1484','COM6')
+    drone.pair()
     print("Paired")
     # data_flag.value = 1
     detected_flag.value = 0
@@ -76,25 +78,56 @@ def drone_thread_function2(detected_flag):
     # drone_start_timer = time.time()
     print("Taking Off")
     # print(drone.get_height())
-    drone.go_to_height(400)
+    # drone.go_to_height(400)
 
-    drone.set_pitch(30)
+    drone.set_pitch(20)
 
     while True:
         drone.move()
+        data_flag.value = 1
         if detected_flag.value == 1:
-            drone_land2(drone)
+            drone_land2(drone,q,detected_flag,data_flag)
+            break
+        # if detected_flag.value == 1 and not q.empty():
+        #     data_flag.value = 1
+        #     start_coords2 = q.get(0)
+        #     xl,yl,zl = [0,0,0]
+        #     xs,ys,zs = start_coords2
+        #     x = xs - xl
+        #     z = zs - zl
+        #     drone_land2(drone,x,z)
+        #     break
 
-def drone_land2(drone):
-    drone.go_to_height(200)
-    drone.land()
-    drone.close()
-    print('drone closed')
-    drone.disconnect()
-    print('drone disconnected')
+def drone_land2(drone,q,detected_flag,data_flag):
+    print('in drone land')
+    while True:
+        if detected_flag.value == 1 and not q.empty():
+            data_flag.value = 1
+            start_coords2 = q.get(0)
+            xl,yl,zl = [0,0,0]
+            xs,ys,zs = start_coords2
+            x = xs - xl
+            z = zs - zl
+
+            print(x,z)
+
+            if x == 0 and z == 0:
+                drone.set_pitch(20)
+                drone.move(4)
+
+            if depth_lower_threshold <= z <= depth_upper_threshold and left_threshold <= x <= right_threshold:
+                drone.go_to_height(200)
+                drone.land()
+                drone.close()
+                print('drone closed')
+                drone.disconnect()
+                print('drone disconnected')
+                break
+            else:
+                drone_move(drone,x,z)
 
 # def camera_thread_function(q,data_flag):
-def camera_thread_function(detected_flag):
+def camera_thread_function(q,detected_flag,data_flag):
 
     # camera setup
     labelMap = [
@@ -277,7 +310,11 @@ def camera_thread_function(detected_flag):
 
                 if str(label) == "person":
                     detected_flag.value = 1
-                    print("camera detected person")
+                    if data_flag.value == 1:
+                        q.put([xs,0,zs])
+                        data_flag.value = 0
+                    # if counter % 50 == 0:
+                    #     print("camera detected person")
 
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                         (255, 255, 255))
@@ -290,8 +327,8 @@ def camera_thread_function(detected_flag):
 def drone_move(drone, x,z):
     #startTime = time.time()
 
-    pitch_power = 30                                                                                                        # 20 is the scale factor for pitch, assume while loop repeat 3 times
-    roll_power = 20                                                                                                                 # moves left 20
+    pitch_power = 20                                                                                                        # 20 is the scale factor for pitch, assume while loop repeat 3 times
+    roll_power = 10                                                                                                                 # moves left 20
 
     if x < left_threshold:
         drone.set_pitch(0)
@@ -315,12 +352,12 @@ def drone_move(drone, x,z):
             print('move forward')
             drone.set_pitch(pitch_power)
             drone.move(1)
-        elif z < depth_lower_threshold:
-            drone.set_roll(0)
-            drone.set_throttle(0)
-            print('move backward')
-            drone.set_pitch(-pitch_power)
-            drone.move(1)
+        # elif z < depth_lower_threshold:
+        #     drone.set_roll(0)
+        #     drone.set_throttle(0)
+        #     print('move backward')
+        #     drone.set_pitch(-pitch_power)
+        #     drone.move(1)
         else:
             drone.set_pitch(0)
             drone.set_throttle(0)
@@ -357,11 +394,11 @@ if __name__ == '__main__':
     detected_flag = Value('i',0)
 
     # camera = Process(target=camera_thread_function, args=(locationQ,data_flag))
-    camera = Process(target=camera_thread_function, args=(detected_flag,))
+    camera = Process(target=camera_thread_function, args=(locationQ,detected_flag,data_flag))
     camera.start()
 
     # drone1 = Process(target=drone_thread_function2, args=(locationQ,data_flag))
-    drone1 = Process(target=drone_thread_function2, args=(detected_flag,))
+    drone1 = Process(target=drone_thread_function2, args=(locationQ,detected_flag,data_flag))
     drone1.start()
 
     camera.join()
