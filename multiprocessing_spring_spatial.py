@@ -3,14 +3,12 @@ import depthai as dai
 import numpy as np
 import blobconverter
 import CoDrone
-import queue
-from threading import Thread
 from multiprocessing import Process, Manager, Value, Queue, freeze_support
 import time
 from pyzbar.pyzbar import decode
 from ctypes import c_char_p
 
-height_threshold = 180  # height before drone.land()
+height_threshold = 200  # height before drone.land()
 depth_upper_threshold = 1000
 depth_lower_threshold = 300
 left_threshold = -300
@@ -22,8 +20,9 @@ data_request_start = 0
 data_request_end = 0
 
 yaw_power = 20
-pitch_power = 20
-roll_power = 20
+pitch_power = 25
+roll_power = 10
+
 
 def drone_thread_function(q,data_flag):
 
@@ -68,6 +67,7 @@ def drone_thread_function(q,data_flag):
 
     data_flag.value = 0
 
+
 def drone_thread_function2(q,detected_flag,data_flag,Qrcode_value):
     # set up drone connection and take off before trying to land
     print('Creating Drone Object')
@@ -105,19 +105,14 @@ def drone_thread_function2(q,detected_flag,data_flag,Qrcode_value):
                 drone.move()
                 if Qrcode_value.value != "Rotate Left":
                     break
-        elif Qrcode_value.value == "Rotate End":
-            drone.set_yaw(0)
-            while True:
-                drone.move()
-                if Qrcode_value.value != "Rotate End":
-                    break
         elif Qrcode_value.value == "Move Forward":
             drone.set_pitch(pitch_power)
             while True:
                 drone.move()
                 data_flag.value = 1
                 if detected_flag.value == 1:
-                    drone_land2(drone,q,detected_flag,data_flag)
+                    detected_land(drone)
+                    # drone_land2(drone,q,detected_flag,data_flag)
                     break
             break
         elif Qrcode_value.value == "Move Right":
@@ -132,27 +127,30 @@ def drone_thread_function2(q,detected_flag,data_flag,Qrcode_value):
                 drone.move()
                 if Qrcode_value.value != "Move Left":
                     break
-        elif Qrcode_value.value == "Move End":
+        elif Qrcode_value.value == "Hover":
+            drone.set_yaw(0)
+            drone.set_pitch(0)
             drone.set_roll(0)
             while True:
                 drone.move()
-                if Qrcode_value.value != "Move End":
+                if Qrcode_value.value != "Hover":
                     break
         drone.set_yaw(0)
         drone.set_pitch(0)
         drone.set_roll(0)
 
 
+def detected_land(drone):
+    print("Drone detected by camera. Initiate landing ...")
+    drone.go_to_height(height_threshold)
 
-        # if detected_flag.value == 1 and not q.empty():
-        #     data_flag.value = 1
-        #     start_coords2 = q.get(0)
-        #     xl,yl,zl = [0,0,0]
-        #     xs,ys,zs = start_coords2
-        #     x = xs - xl
-        #     z = zs - zl
-        #     drone_land2(drone,x,z)
-        #     break
+    drone.land()
+    print("landing")
+    drone.close()
+    print('drone closed')
+    drone.disconnect()
+    print('drone disconnected')
+
 
 def drone_land2(drone,q,detected_flag,data_flag):
     print('in drone land')
@@ -168,11 +166,11 @@ def drone_land2(drone,q,detected_flag,data_flag):
             print(x,z)
 
             if x == 0 and z == 0:
-                drone.set_pitch(20)
+                drone.set_pitch(pitch_power)
                 drone.move(4)
 
             if depth_lower_threshold <= z <= depth_upper_threshold and left_threshold <= x <= right_threshold:
-                drone.go_to_height(200)
+                drone.go_to_height(height_threshold)
                 drone.land()
                 drone.close()
                 print('drone closed')
@@ -182,13 +180,14 @@ def drone_land2(drone,q,detected_flag,data_flag):
             else:
                 drone_move(drone,x,z)
 
+
 def camera_QRcode_thread_function(Qrcode_value):
     video_capture = cv2.VideoCapture(0)
     video_capture.set(3, 1920)
     video_capture.set(4, 1080)
 
     # Need to define a target item to detect
-    item_to_detect = ["Takeoff", "Rotate Right", "Rotate Left", "Rotate End", "Move Forward", "Move Right", "Move Left", "Move End"]
+    item_to_detect = ["Takeoff", "Rotate Right", "Rotate Left", "Move Forward", "Move Right", "Move Left", "Hover"]
     keyVal = 0
 
     if video_capture.isOpened():
@@ -241,6 +240,7 @@ def camera_QRcode_thread_function(Qrcode_value):
 
     video_capture.release()
     exit()
+
 
 # def camera_thread_function(q,data_flag):
 def camera_thread_function(q,detected_flag,data_flag):
@@ -440,6 +440,7 @@ def camera_thread_function(q,detected_flag,data_flag):
             if cv2.waitKey(1) == ord('q'):
                 break
 
+
 def drone_move(drone, x,z):
     #startTime = time.time()
 
@@ -461,7 +462,7 @@ def drone_move(drone, x,z):
     else:
         drone.set_roll(0)
         drone.set_throttle(0)
-        drone.move(0)
+        # drone.move(0)
         if z > depth_upper_threshold:
             drone.set_roll(0)
             drone.set_throttle(0)
@@ -478,6 +479,7 @@ def drone_move(drone, x,z):
             drone.set_pitch(0)
             drone.set_throttle(0)
             drone.move(0)
+
 
 def drone_land(drone, x,z,drone_start_timer):
     if depth_lower_threshold <= z <= depth_upper_threshold and left_threshold <= x <= right_threshold:
@@ -500,6 +502,7 @@ def drone_land(drone, x,z,drone_start_timer):
 
     # executionTime = (time.time() - startTime)
     # print('Execution time in seconds: ' + str(executionTime))
+
 
 if __name__ == '__main__':
     freeze_support()
