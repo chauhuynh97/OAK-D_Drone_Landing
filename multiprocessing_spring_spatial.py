@@ -109,17 +109,8 @@ def drone_thread_function2(z_location,Qrcode_value):
             drone.set_pitch(pitch_power)
             while True:
                 drone.move()
-                # data_flag.value = 1
-                if z_location.value < 1500 and z_location.value != 0:
-                    # data_flag.value = 1
-                    # print(q.get(0))
-                    # start_coords = q.get(0)
-                    # xs,ys,zs = start_coords
-                    # print(xs,zs)
-                    detected_land(drone,z_location)
-                    # drone_land2(drone,q,detected_flag,data_flag)
+                if Qrcode_value.value != "Move Forward":
                     break
-            break
         elif Qrcode_value.value == "Move Right":
             drone.set_roll(roll_power)
             while True:
@@ -136,10 +127,30 @@ def drone_thread_function2(z_location,Qrcode_value):
             drone.set_yaw(0)
             drone.set_pitch(0)
             drone.set_roll(0)
-            while True:
-                drone.move()
-                if Qrcode_value.value != "Hover":
-                    break
+
+            drone.move(5)
+            # if Qrcode_value.value != "Hover":
+            #     break
+            # if z_location.value < 1500 and z_location.value != 0:
+            #     # data_flag.value = 1
+            #     # print(q.get(0))
+            #     # start_coords = q.get(0)
+            #     # xs,ys,zs = start_coords
+            #     # print(xs,zs)
+            #     detected_land(drone,z_location)
+                # drone_land2(drone,q,detected_flag,data_flag)
+
+            if z_location.value < 30000:
+                print(z_location.value)
+                drone.set_pitch(25)
+                drone.move(4)
+                drone.go_to_height(200)
+                drone.land()
+                drone.close()
+                break
+            else:
+                Qrcode_value.value = "Move Forward"
+
         drone.set_yaw(0)
         drone.set_pitch(0)
         drone.set_roll(0)
