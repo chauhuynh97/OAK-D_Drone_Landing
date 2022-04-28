@@ -1,3 +1,4 @@
+
 import cv2
 import depthai as dai
 import numpy as np
@@ -20,7 +21,7 @@ data_request_start = 0
 data_request_end = 0
 
 yaw_power = 20
-pitch_power = 25
+pitch_power = 15
 roll_power = 10
 
 
@@ -68,7 +69,7 @@ def drone_thread_function(q,data_flag):
     data_flag.value = 0
 
 
-def drone_thread_function2(q,detected_flag,data_flag,Qrcode_value):
+def drone_thread_function2(z_location,Qrcode_value):
     # set up drone connection and take off before trying to land
     print('Creating Drone Object')
     drone = CoDrone.CoDrone()
@@ -78,7 +79,6 @@ def drone_thread_function2(q,detected_flag,data_flag,Qrcode_value):
     drone.pair()
     print("Paired")
     # data_flag.value = 1
-    detected_flag.value = 0
     # drone.takeoff()
     # drone.set_throttle(50)
     # drone_start_timer = time.time()
@@ -109,9 +109,14 @@ def drone_thread_function2(q,detected_flag,data_flag,Qrcode_value):
             drone.set_pitch(pitch_power)
             while True:
                 drone.move()
-                data_flag.value = 1
-                if detected_flag.value == 1:
-                    detected_land(drone)
+                # data_flag.value = 1
+                if z_location.value < 1500 and z_location.value != 0:
+                    # data_flag.value = 1
+                    # print(q.get(0))
+                    # start_coords = q.get(0)
+                    # xs,ys,zs = start_coords
+                    # print(xs,zs)
+                    detected_land(drone,z_location)
                     # drone_land2(drone,q,detected_flag,data_flag)
                     break
             break
@@ -140,9 +145,22 @@ def drone_thread_function2(q,detected_flag,data_flag,Qrcode_value):
         drone.set_roll(0)
 
 
-def detected_land(drone):
+def detected_land(drone,z_location):
+    # if detected_flag.value == 1 and not q.empty():
+    #     data_flag.value = 1
+    #     start_coords2 = q.get(0)
+    #     xl,yl,zl = [0,0,0]
+    #     xs,ys,zs = start_coords2
+    #     x = xs - xl
+    #     z = zs - zl
+    #
+    #     print(x,z)
+
     print("Drone detected by camera. Initiate landing ...")
     drone.go_to_height(height_threshold)
+
+    drone.set_pitch(10)
+    drone.move(1)
 
     drone.land()
     print("landing")
@@ -243,7 +261,7 @@ def camera_QRcode_thread_function(Qrcode_value):
 
 
 # def camera_thread_function(q,data_flag):
-def camera_thread_function(q,detected_flag,data_flag):
+def camera_thread_function(z_location):
 
     # camera setup
     labelMap = [
@@ -425,10 +443,12 @@ def camera_thread_function(q,detected_flag,data_flag):
                 #     # print('data request time', data_request_end - data_request_start)
 
                 if str(label) == "person":
-                    detected_flag.value = 1
-                    if data_flag.value == 1:
-                        q.put([xs,0,zs])
-                        data_flag.value = 0
+                    z_location.value = zs
+                    # detected_flag.value = 1
+                    # if data_flag.value == 1:
+                    #     # q.put([xs,0,zs])
+                    #
+                    #     data_flag.value = 0
                     # if counter % 50 == 0:
                     #     print("camera detected person")
 
@@ -508,14 +528,15 @@ if __name__ == '__main__':
     freeze_support()
 
     data_flag = Value('i',0)
-    locationQ = Queue()
+    # locationQ = Queue()
+    z_location = Value('i',30000)
     manager = Manager()
     Qrcode_value = manager.Value(c_char_p, "")
 
     detected_flag = Value('i',0)
 
     # camera = Process(target=camera_thread_function, args=(locationQ,data_flag))
-    camera = Process(target=camera_thread_function, args=(locationQ,detected_flag,data_flag))
+    camera = Process(target=camera_thread_function, args=(z_location,))
     camera.start()
 
     # QR webcam
@@ -523,7 +544,7 @@ if __name__ == '__main__':
     webcam.start()
 
     # drone1 = Process(target=drone_thread_function2, args=(locationQ,data_flag))
-    drone1 = Process(target=drone_thread_function2, args=(locationQ,detected_flag,data_flag,Qrcode_value))
+    drone1 = Process(target=drone_thread_function2, args=(z_location,Qrcode_value))
     drone1.start()
 
     camera.join()
