@@ -11,14 +11,13 @@ import time
 height_threshold = 180  # height before drone.land()
 depth_upper_threshold = 1350
 depth_lower_threshold = 500
-left_threshold = -300
-right_threshold = 300
+left_threshold = -250
+right_threshold = 250
 
 drone_movement_start = 0
 drone_movement_end = 0
 data_request_start = 0
 data_request_end = 0
-
 
 def drone_thread_function(q,data_flag):
 
@@ -31,14 +30,20 @@ def drone_thread_function(q,data_flag):
     data_flag.value = 1
     drone.takeoff()
     drone.set_throttle(50)
+    drone_start_timer = time.time()
     print("Taking Off")
     print(drone.get_height())
+
+    data_request_timer_counter = 0
 
     while True:
 
         if data_flag.value == 0 and not q.empty():
             start_coords = q.get(0)
             data_request_end = time.time()
+            if data_request_timer_counter != 0:
+                print('data request time', data_request_end - data_request_start)
+            data_request_timer_counter += 1
             print('from drone',start_coords)
             # x:left-right, y:height, z:depth in mm
             xs,ys,zs = start_coords
@@ -46,17 +51,16 @@ def drone_thread_function(q,data_flag):
             x = xs - xl
             z = zs - zl
             drone_movement_start = time.time()
-            drone_land(drone,x,z)
+            drone_land(drone,x,z,drone_start_timer)
             drone_movement_end = time.time()
             print('drone movement time', drone_movement_end - drone_movement_start)
             data_flag.value = 1
             data_request_start = time.time()
-            print('data request time', data_request_start - data_request_end)
+
         # else:
         #     print('q is empty')
 
     data_flag.value = 0
-
 
 def camera_thread_function(q,data_flag):
     # camera setup
@@ -159,6 +163,8 @@ def camera_thread_function(q,data_flag):
         color = (255, 255, 255)
 
         while True:
+            person_detection_timer_start = time.time()
+
             # xs,ys,zs = 0,0,0
             inPreview = previewQueue.get()
             inDet = detectionNNQueue.get()
@@ -221,6 +227,10 @@ def camera_thread_function(q,data_flag):
 
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), cv2.FONT_HERSHEY_SIMPLEX)
 
+                if str(label) == 'person':
+                    person_detection_timer_end = time.time()
+                    # print('Time taken to detect a person:', person_detection_timer_end - person_detection_timer_start)
+
                 xs = int(detection.spatialCoordinates.x)
                 ys = int(detection.spatialCoordinates.y)
                 zs = int(detection.spatialCoordinates.z)
@@ -240,13 +250,11 @@ def camera_thread_function(q,data_flag):
             if cv2.waitKey(1) == ord('q'):
                 break
 
-
-# simple straight landing function
 def drone_move(drone, x,z):
     #startTime = time.time()
 
-    pitch_power = 20 # 20 is the scale factor for pitch, assume while loop repeat 3 times
-    roll_power = 20  # moves left 20
+    pitch_power = 30                                                                                                        # 20 is the scale factor for pitch, assume while loop repeat 3 times
+    roll_power = 20                                                                                                                 # moves left 20
 
     if x < left_threshold:
         drone.set_pitch(0)
@@ -281,9 +289,11 @@ def drone_move(drone, x,z):
             drone.set_throttle(0)
             drone.move(0)
 
-def drone_land(drone, x,z):
+def drone_land(drone, x,z,drone_start_timer):
     if depth_lower_threshold <= z <= depth_upper_threshold and left_threshold <= x <= right_threshold:
         drone.go_to_height(height_threshold)
+        drone_end_timer = time.time()
+        print('Total time taken from takeoff to landing:', drone_end_timer - drone_start_timer)
 
         print('coords before landing', x, z)
         # drone.set_pitch(5)
