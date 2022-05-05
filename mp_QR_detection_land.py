@@ -9,7 +9,7 @@ import time
 from pyzbar.pyzbar import decode
 from ctypes import c_char_p
 
-height_threshold = 200  # height before drone.land()
+height_threshold = 400  # height before drone.land()
 depth_upper_threshold = 1000
 depth_lower_threshold = 300
 left_threshold = -300
@@ -109,16 +109,18 @@ def drone_thread_function2(z_location,Qrcode_value):
             drone.set_pitch(pitch_power)
             while True:
                 drone.move()
-                if z_location.value < 1500 and z_location.value != 0:
+                if z_location.value < depth_upper_threshold and z_location.value != 0:
                     print('Before landing:')
                     print(z_location.value)
                     detected_land(drone,z_location)
                     # drone_land2(drone,q,detected_flag,data_flag)
                     break
-                elif z_location.value < 1500 and z_location.value == 0:
+                elif z_location.value < depth_upper_threshold and z_location.value == 0:
                     print("Before hover:")
                     print(z_location.value)
                     drone.hover(5)
+                    drone.set_pitch(pitch_power)
+                    drone.move(2)
                     continue
 
             break
@@ -161,8 +163,8 @@ def detected_land(drone,z_location):
     print("Drone detected by camera. Initiate landing ...")
     drone.go_to_height(height_threshold)
 
-    drone.set_pitch(10)
-    drone.move(1)
+    drone.set_pitch(40)
+    drone.move(2)
 
     drone.land()
     print("landing")
@@ -302,6 +304,7 @@ def camera_thread_function(z_location):
     xoutNN.setStreamName("detections")
     xoutBoundingBoxDepthMapping.setStreamName("boundingBoxDepthMapping")
     xoutDepth.setStreamName("depth")
+    camRgb.setPreviewKeepAspectRatio(False)
 
     # Properties
     camRgb.setPreviewSize(416, 416)
@@ -457,7 +460,7 @@ def camera_thread_function(z_location):
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                         (255, 255, 255))
 
-            cv2.imshow("preview", frame)
+            cv2.imshow("rgb", cv2.resize(frame, (640,480)))
 
             if cv2.waitKey(1) == ord('q'):
                 break
@@ -537,13 +540,13 @@ if __name__ == '__main__':
 
     detected_flag = Value('i',0)
 
-    # camera = Process(target=camera_thread_function, args=(locationQ,data_flag))
-    camera = Process(target=camera_thread_function, args=(z_location,))
-    camera.start()
-
     # QR webcam
     webcam = Process(target=camera_QRcode_thread_function, args=(Qrcode_value,))
     webcam.start()
+
+    # camera = Process(target=camera_thread_function, args=(locationQ,data_flag))
+    camera = Process(target=camera_thread_function, args=(z_location,))
+    camera.start()
 
     # drone1 = Process(target=drone_thread_function2, args=(locationQ,data_flag))
     drone1 = Process(target=drone_thread_function2, args=(z_location,Qrcode_value))
