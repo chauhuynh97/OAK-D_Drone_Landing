@@ -122,7 +122,7 @@ def drone_thread_function2(z_location,Qrcode_value,cart_speed):
                     print(z_location.value)
                     while True:
                         drone.hover()
-                        if 0 < z_location < 30000:
+                        if 0 < z_location.value and z_location.value < 30000:
                             break
                     drone.set_pitch(pitch_power)
                     drone.move(2)
@@ -146,7 +146,7 @@ def drone_thread_function2(z_location,Qrcode_value,cart_speed):
             drone.set_roll(0)
             while True:
                 drone.move()
-                if Qrcode_value.value != "Hover":
+                if z_location > 0 and z_location < 30000:
                     break
         drone.set_yaw(0)
         drone.set_pitch(0)
@@ -166,8 +166,10 @@ def detected_land(drone,cart_speed):
 
     print("Drone detected by camera. Initiate landing ...")
     drone.go_to_height(height_threshold)
-
+    print(cart_speed.value)
     pitch = (cart_speed.value/100)*40
+    pitch = pitch/10
+    print(pitch)
     if pitch >= 5:
         drone.set_pitch(pitch)
         drone.move(1)
@@ -467,7 +469,7 @@ def camera_thread_function(z_location,cart_speed):
                     # if counter % 50 == 0:
                     #     print("camera detected person")
 
-                if str(label) == "chair":
+                if str(label) == "backpack":
                     anker_loc.append(zs)
 
                 if len(anker_loc) > 15:
@@ -477,7 +479,7 @@ def camera_thread_function(z_location,cart_speed):
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                         (255, 255, 255))
 
-            cv2.imshow("rgb", cv2.resize(frame, (1920,1080)))
+            cv2.imshow("rgb", cv2.resize(frame, (640,480)))
 
             if cv2.waitKey(1) == ord('q'):
                 break
