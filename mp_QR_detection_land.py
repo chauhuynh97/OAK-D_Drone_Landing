@@ -8,7 +8,7 @@ import time
 from pyzbar.pyzbar import decode
 from ctypes import c_char_p
 
-height_threshold = 400  # height before drone.land()
+height_threshold = 600  # height before drone.land()
 depth_upper_threshold = 1000
 depth_lower_threshold = 300
 left_threshold = -300
@@ -146,11 +146,12 @@ def drone_thread_function2(z_location,Qrcode_value,cart_speed):
             drone.set_roll(0)
             while True:
                 drone.move()
-                if z_location > 0 and z_location < 30000:
+                if z_location.value > 0 and z_location.value < 30000:
                     break
         drone.set_yaw(0)
         drone.set_pitch(0)
         drone.set_roll(0)
+
 
 
 def detected_land(drone,cart_speed):
@@ -165,17 +166,25 @@ def detected_land(drone,cart_speed):
     #     print(x,z)
 
     print("Drone detected by camera. Initiate landing ...")
-    drone.go_to_height(height_threshold)
-    print(cart_speed.value)
-    pitch = (cart_speed.value/100)*40
-    pitch = pitch/10
-    print(pitch)
-    if pitch >= 5:
+    #drone.go_to_height(height_threshold)
+    print("cart speed",cart_speed.value)
+    if cart_speed.value == 1234567892:
+        pitch = 35
+    else:
+        pitch = (cart_speed.value/100)*40
+        pitch = pitch/5
+
+    print("pitch",pitch)
+    if pitch > 100:
+        pitch = 50
+    if 5 <= pitch:
         drone.set_pitch(pitch)
         drone.move(1)
 
+
     print("cart speed", cart_speed.value)
 
+    drone.go_to_height(height_threshold)
     drone.land()
     print("landing")
     drone.close()
@@ -473,8 +482,13 @@ def camera_thread_function(z_location,cart_speed):
                     anker_loc.append(zs)
 
                 if len(anker_loc) > 15:
-                    cart_speed.value = calculate_speed(anker_loc[0],anker_loc[14],t=0.5)
+                    temp = calculate_speed(anker_loc[0],anker_loc[14],t=0.5)
+                    if temp != 0:
+                        cart_speed.value = temp
+                    else:
+                        cart_speed.value = 123456789
                     anker_loc = anker_loc[15:]
+                    # print(cart_speed.value)
 
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                         (255, 255, 255))
@@ -563,7 +577,7 @@ if __name__ == '__main__':
     z_location = Value('i',30000)
     manager = Manager()
     Qrcode_value = manager.Value(c_char_p, "")
-    cart_speed = Value('f',0)
+    cart_speed = Value('f', 0)
 
     # detected_flag = Value('i',0)
 
