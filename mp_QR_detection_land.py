@@ -24,53 +24,7 @@ pitch_power = 17
 roll_power = 10
 
 
-# def drone_thread_function(q,data_flag):
-#
-#     # set up drone connection and take off before trying to land
-#     print('Creating Drone Object')
-#     drone = CoDrone.CoDrone()
-#     print("Getting Ready to Pair")
-#     drone.pair(drone.Nearest)
-#     print("Paired")
-#     data_flag.value = 1
-#     drone.takeoff()
-#     print("Taking Off")
-#     drone.go_to_height(500)
-#     # drone.set_throttle(50)
-#     drone_start_timer = time.time()
-#
-#     print(drone.get_height())
-#
-#     data_request_timer_counter = 0
-#
-#     while True:
-#
-#         if data_flag.value == 0 and not q.empty():
-#             start_coords = q.get(0)
-#             data_request_end = time.time()
-#             if data_request_timer_counter != 0:
-#                 print('data request time', data_request_end - data_request_start)
-#             data_request_timer_counter += 1
-#             print('from drone',start_coords)
-#             # x:left-right, y:height, z:depth in mm
-#             xs,ys,zs = start_coords
-#             xl,yl,zl = [0,0,0]
-#             x = xs - xl
-#             z = zs - zl
-#             drone_movement_start = time.time()
-#             drone_land(drone,x,z,drone_start_timer)
-#             drone_movement_end = time.time()
-#             print('drone movement time', drone_movement_end - drone_movement_start)
-#             data_flag.value = 1
-#             data_request_start = time.time()
-#
-#         # else:
-#         #     print('q is empty')
-#
-#     data_flag.value = 0
-
-
-def drone_thread_function2(z_location,Qrcode_value,cart_speed):
+def drone_thread_function(z_location,Qrcode_value,cart_speed):
     # set up drone connection and take off before trying to land
     print('Creating Drone Object')
     drone = CoDrone.CoDrone()
@@ -79,16 +33,6 @@ def drone_thread_function2(z_location,Qrcode_value,cart_speed):
     # drone.pair('1484','COM6')
     # drone.pair()
     print("Paired")
-    # data_flag.value = 1
-    # drone.takeoff()
-    # drone.set_throttle(50)
-    # drone_start_timer = time.time()
-    # print("Taking Off")
-    # print(drone.get_height())
-    # drone.go_to_height(400)
-    #     "Rotate Right", "Rotate Left", "Rotate End", "Move Forward", "Move Right", "Move Left", "Move End"
-
-    #drone.set_pitch(20)
 
     while True:
         if Qrcode_value.value == "Takeoff":
@@ -153,18 +97,7 @@ def drone_thread_function2(z_location,Qrcode_value,cart_speed):
         drone.set_roll(0)
 
 
-
 def detected_land(drone,cart_speed):
-    # if detected_flag.value == 1 and not q.empty():
-    #     data_flag.value = 1
-    #     start_coords2 = q.get(0)
-    #     xl,yl,zl = [0,0,0]
-    #     xs,ys,zs = start_coords2
-    #     x = xs - xl
-    #     z = zs - zl
-    #
-    #     print(x,z)
-
     print("Drone detected by camera. Initiate landing ...")
     #drone.go_to_height(height_threshold)
     print("cart speed",cart_speed.value)
@@ -193,39 +126,10 @@ def detected_land(drone,cart_speed):
     print('drone disconnected')
 
 
-# def drone_land2(drone,q,detected_flag,data_flag):
-#     print('in drone land')
-#     while True:
-#         if detected_flag.value == 1 and not q.empty():
-#             data_flag.value = 1
-#             start_coords2 = q.get(0)
-#             xl,yl,zl = [0,0,0]
-#             xs,ys,zs = start_coords2
-#             x = xs - xl
-#             z = zs - zl
-#
-#             print(x,z)
-#
-#             if x == 0 and z == 0:
-#                 drone.set_pitch(pitch_power)
-#                 drone.move(4)
-#
-#             if depth_lower_threshold <= z <= depth_upper_threshold and left_threshold <= x <= right_threshold:
-#                 drone.go_to_height(height_threshold)
-#                 drone.land()
-#                 drone.close()
-#                 print('drone closed')
-#                 drone.disconnect()
-#                 print('drone disconnected')
-#                 break
-#             else:
-#                 drone_move(drone,x,z)
-
-
 def camera_QRcode_thread_function(Qrcode_value):
     video_capture = cv2.VideoCapture(0)
-    video_capture.set(3, 1920)
-    video_capture.set(4, 1080)
+    video_capture.set(3, 1280)
+    video_capture.set(4, 720)
 
     # Need to define a target item to detect
     item_to_detect = ["Takeoff", "Rotate Right", "Rotate Left", "Move Forward", "Move Right", "Move Left", "Hover"]
@@ -259,10 +163,6 @@ def camera_QRcode_thread_function(Qrcode_value):
 
                     pt1 = [top_left_x, top_left_y]
                     pt2 = [bot_right_x, bot_right_y]
-
-                    # For testing purposes
-                    # print(pt1)
-                    # print(pt2)
 
                     # Only draw bounding boxes if the QRCode matches the QR_code
                     cv2.polylines(img, [polygon_conversion], True, (0, 0, 255), 4)
@@ -461,34 +361,20 @@ def camera_thread_function(z_location,cart_speed):
                 ys = int(detection.spatialCoordinates.y)
                 zs = int(detection.spatialCoordinates.z)
 
-                # str(label) == "person" and
-                # if data_flag.value == 1 and str(label) == "person":
-                #     q.put([xs,0,zs])
-                #     data_flag.value = 0
-                #     # data_request_end = time.time()
-                #     # print('data request time', data_request_end - data_request_start)
-
                 if str(label) == "person":
                     z_location.value = zs
-                    # detected_flag.value = 1
-                    # if data_flag.value == 1:
-                    #     # q.put([xs,0,zs])
-                    #
-                    #     data_flag.value = 0
-                    # if counter % 50 == 0:
-                    #     print("camera detected person")
 
-                if str(label) == "backpack":
+                if str(label) == "chair":
                     anker_loc.append(zs)
 
                 if len(anker_loc) > 15:
-                    temp = calculate_speed(anker_loc[0],anker_loc[14],t=0.5)
-                    if temp != 0:
-                        cart_speed.value = temp
-                    else:
+                    if anker_loc[0] == anker_loc[14]:
                         cart_speed.value = 123456789
+                    elif anker_loc[0] != 0 and anker_loc[14] != 0:
+                        cart_speed.value = calculate_speed(anker_loc[0],anker_loc[14],t=0.5)
+                    else:
+                        cart_speed.value = cart_speed.value
                     anker_loc = anker_loc[15:]
-                    # print(cart_speed.value)
 
             cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4,
                         (255, 255, 255))
@@ -506,80 +392,13 @@ def calculate_speed(start_pos, end_pos, t=1):
     return diff / t
 
 
-# def drone_move(drone, x,z):
-#     #startTime = time.time()
-#
-#     pitch_power = 20                                                                                                        # 20 is the scale factor for pitch, assume while loop repeat 3 times
-#     roll_power = 10                                                                                                                 # moves left 20
-#
-#     if x < left_threshold:
-#         drone.set_pitch(0)
-#         drone.set_throttle(0)
-#         print('move right')
-#         drone.set_roll(-roll_power)
-#         drone.move(1)
-#     elif x > right_threshold:
-#         drone.set_pitch(0)
-#         drone.set_throttle(0)
-#         print('move left')
-#         drone.set_roll(roll_power)
-#         drone.move(1)
-#     else:
-#         drone.set_roll(0)
-#         drone.set_throttle(0)
-#         # drone.move(0)
-#         if z > depth_upper_threshold:
-#             drone.set_roll(0)
-#             drone.set_throttle(0)
-#             print('move forward')
-#             drone.set_pitch(pitch_power)
-#             drone.move(1)
-#         # elif z < depth_lower_threshold:
-#         #     drone.set_roll(0)
-#         #     drone.set_throttle(0)
-#         #     print('move backward')
-#         #     drone.set_pitch(-pitch_power)
-#         #     drone.move(1)
-#         else:
-#             drone.set_pitch(0)
-#             drone.set_throttle(0)
-#             drone.move(0)
-
-
-# def drone_land(drone, x,z,drone_start_timer):
-#     if depth_lower_threshold <= z <= depth_upper_threshold and left_threshold <= x <= right_threshold:
-#         drone.go_to_height(height_threshold)
-#         drone_end_timer = time.time()
-#         print('Total time taken from takeoff to landing:', drone_end_timer - drone_start_timer)
-#
-#         print('coords before landing', x, z)
-#         # drone.set_pitch(5)
-#         # drone.move(1)
-#         print('landing')
-#         drone.land()
-#         print("landing")
-#         drone.close()
-#         print('drone closed')
-#         drone.disconnect()
-#         print('drone disconnected')
-#     else:
-#         drone_move(drone,x,z)
-#
-#     # executionTime = (time.time() - startTime)
-#     # print('Execution time in seconds: ' + str(executionTime))
-
-
 if __name__ == '__main__':
     freeze_support()
 
-    # data_flag = Value('i',0)
-    # locationQ = Queue()
     z_location = Value('i',30000)
     manager = Manager()
     Qrcode_value = manager.Value(c_char_p, "")
     cart_speed = Value('f', 0)
-
-    # detected_flag = Value('i',0)
 
     # QR webcam
     webcam = Process(target=camera_QRcode_thread_function, args=(Qrcode_value,))
@@ -589,8 +408,8 @@ if __name__ == '__main__':
     camera = Process(target=camera_thread_function, args=(z_location,cart_speed))
     camera.start()
 
-    # drone1 = Process(target=drone_thread_function2, args=(locationQ,data_flag))
-    drone1 = Process(target=drone_thread_function2, args=(z_location,Qrcode_value,cart_speed))
+    # drone1 = Process(target=drone_thread_function, args=(locationQ,data_flag))
+    drone1 = Process(target=drone_thread_function, args=(z_location,Qrcode_value,cart_speed))
     drone1.start()
 
     camera.join()
